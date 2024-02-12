@@ -1,0 +1,94 @@
+---
+title: "PSRC Standard Trends"
+author: "PSRC Staff"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+\setmainfont{Poppins}
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(psrcplot)
+
+knitr::opts_chunk$set(echo = FALSE)
+
+trend_data <- readRDS("data/trend_data.rds")
+
+```
+
+## Population
+
+Regional Population:
+
+```{r region-population}
+
+chart_data <- trend_data |> 
+  filter(metric == "Population" & grouping == "Annual" & geography == "Region" & variable %in% c("Total", "Forecast") & year >= "2010") |>
+  mutate(variable = str_replace_all(variable, "Total", "Observed")) |>
+  filter(year <= "2023")
+
+region_population_chart <- echart_line_chart(t = chart_data,
+                                             x = "year",
+                                             y= "estimate",
+                                             fill = "variable",
+                                             est = 'number',
+                                             color = psrc_colors$pognbgy_5)
+
+region_population_chart
+
+```
+
+## Household Income by MPO Area  
+Chart of the share of households by metropolitan area that make at least \$200,000 per year.  The Seattle area had the 5th highest share of earners making at least \$200,000. 
+
+```{r mpo-income}
+
+chart_data <- trend_data |> 
+  filter(metric == "income" & geography_type == "Metro Areas" & variable %in% c("more than $200k")) |>
+  mutate(metric = "% of Households that make more than $200k") |>
+  arrange(desc(share))
+
+mpo_income_chart <- echart_bar_chart(t = chart_data ,
+                                     x = "geography",
+                                     y = "share",
+                                     fill = "metric",
+                                     column_vs_bar = "bar",
+                                     est = "percent",
+                                     color = psrc_colors$gnbopgy_5,
+                                     title = "Percentage of Households with incomes over $200,000",
+                                     subtitle = "5yr ACS table B19001: 2022")
+
+mpo_income_chart
+
+```
+
+## Commute Mode to Work  
+Chart of the share of commuters by simple mode to work. 
+
+```{r psrc-commute-mode}
+
+chart_data <- trend_data |> 
+  filter(metric == "commute-modes" & geography == "Region") |>
+  mutate(mode = case_when(
+    variable %in% c("Bike", "Carpooled", "Walk", "Transit", "Other") ~ "non-SOV",
+    variable == "Drove Alone" ~ "SOV",
+    variable == "Work from Home" ~ "WFH")) |>
+  group_by(year, mode) |>
+  summarise(share = sum(share)) |>
+  drop_na() |>
+  as_tibble() 
+
+region_commute_mode_chart <- echart_bar_chart(t = chart_data ,
+                                              x = "year",
+                                              y = "share",
+                                              fill = "mode",
+                                              column_vs_bar = "column",
+                                              est = "percent",
+                                              color = psrc_colors$gnbopgy_5,
+                                              title = "Percentage of Commuters by Mode",
+                                              subtitle = "5yr ACS table B08301: 2022")
+
+region_commute_mode_chart
+
+```
