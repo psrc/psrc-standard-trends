@@ -9,8 +9,9 @@ output: html_document
 
 ```{r setup, include=FALSE}
 library(tidyverse)
-library(psrcplot)
+#library(psrcplot)
 
+source("functions.R")
 knitr::opts_chunk$set(echo = FALSE)
 
 trend_data <- readRDS("data/trend_data.rds")
@@ -33,9 +34,186 @@ region_population_chart <- echart_line_chart(t = chart_data,
                                              y= "estimate",
                                              fill = "variable",
                                              est = 'number',
-                                             color = psrc_colors$pognbgy_5)
+                                             legend = TRUE,
+                                             color = psrcplot::psrc_colors$pognbgy_5)
 
 region_population_chart
+
+```
+Annual Population Change:
+
+```{r region-population-change}
+
+chart_data <- trend_data |> 
+  filter(metric == "Population" & grouping == "Change" & geography == "Region" & variable %in% c("Total") & year >= "2010") |>
+  mutate(variable = str_replace_all(variable, "Total", "Observed"))
+
+region_population_change_chart <- echart_bar_chart(t = chart_data ,
+                                                   x = "year",
+                                                   y = "estimate",
+                                                   column_vs_bar = "column",
+                                                   est = "number",
+                                                   color = psrcplot::psrc_colors$obgnpgy_5)
+
+region_population_change_chart
+
+```
+
+```{r region-population-change-rgeo}
+
+chart_data <- trend_data |> 
+  filter(metric == "Population" & grouping == "Change" & year >= "2010" & geography_type %in% c("City", "Region")) |>
+  filter(!(variable %in% c("Total", "Incorporated", "Forecast"))) |>
+  group_by(variable) |>
+  summarise(estimate=sum(estimate)) |>
+  as_tibble()
+
+region_population_change_rgeo_chart <- psrcplot::create_treemap_chart(t = chart_data,
+                                                                      s = "estimate",
+                                                                      fill = "variable",
+                                                                      est = "number",
+                                                                      color = "pgnobgy_5")
+
+region_population_change_rgeo_chart
+
+```
+
+```{r region-race-2012}
+
+chart_data <- trend_data |> 
+  filter(metric == "race-ethnicity" & geography == "Region" & year == "2012" & variable != "Total") |>
+  mutate(variable = str_wrap(variable, width = 10))
+
+region_population_race_chart_2012 <- echart_pie_chart(t = chart_data,
+                                                      val = "share",
+                                                      lab = "variable",
+                                                      color = psrcplot::psrc_colors$obgnpgy_10,
+                                                      legend=FALSE)
+
+region_population_race_chart_2012
+
+```
+
+```{r region-race-2022}
+
+chart_data <- trend_data |> 
+  filter(metric == "race-ethnicity" & geography == "Region" & year == "2022" & variable != "Total") |>
+  mutate(variable = str_wrap(variable, width = 10))
+
+region_population_race_chart_2012 <- echart_pie_chart(t = chart_data,
+                                                      val = "share",
+                                                      lab = "variable",
+                                                      color = psrcplot::psrc_colors$obgnpgy_10,
+                                                      legend=FALSE)
+
+region_population_race_chart_2012
+
+```
+
+```{r metro-region-race-2022}
+
+chart_data <- trend_data |> 
+  filter(metric == "race-ethnicity" & geography_type == "Metro Areas" & year == "2022") |>
+  filter(!(variable %in% c("Total", "White"))) |>
+  group_by(geography) |>
+  summarise(share = sum(share)) |>
+  as_tibble() |>
+  arrange(desc(share))
+
+metro_population_race_chart_2022 <- echart_bar_chart(t = chart_data ,
+                                     x = "geography",
+                                     y = "share",
+                                     fill = "geography",
+                                     column_vs_bar = "bar",
+                                     est = "percent",
+                                     legend = FALSE,
+                                     color = psrcplot::psrc_colors$gnbopgy_5)
+
+metro_population_race_chart_2022
+
+```
+
+```{r region-education-2022}
+
+chart_data <- trend_data |> 
+  filter(metric == "educational-attainment" & geography == "Region" & variable != "Total") |>
+  mutate(variable = case_when(
+    variable %in% c("Bachelors Degree", "Masters Degree", "Doctorate Degree", "Professional Degree") ~ "College Degree",
+    variable %in% c("Associates Degree", "Some College") ~ "Some College",
+    variable == "High School Diploma" ~ "High School Diploma",
+    variable == "No High School Diploma" ~"No High School Diploma")) |>
+  group_by(year, variable) |>
+  summarise(share = sum(share)) |>
+  as_tibble() |>
+  mutate(variable = factor(variable, levels = c("College Degree",
+                                                "Some College",
+                                                "High School Diploma",
+                                                "No High School Diploma")))
+
+region_education_chart_2012 <- echart_bar_chart(t = chart_data ,
+                                              x = "year",
+                                              y = "share",
+                                              fill = "variable",
+                                              column_vs_bar = "column",
+                                              est = "percent",
+                                              color = psrcplot::psrc_colors$gnbopgy_5,
+                                              legend=TRUE)
+
+region_education_chart_2012
+
+```
+
+```{r metro-region-education-2022}
+
+chart_data <- trend_data |> 
+  filter(metric == "educational-attainment" & geography_type == "Metro Areas" & year == "2022"& variable != "Total") |>
+  mutate(variable = case_when(
+    variable %in% c("Bachelors Degree", "Masters Degree", "Doctorate Degree", "Professional Degree") ~ "College Degree",
+    variable %in% c("Associates Degree", "Some College") ~ "Some College",
+    variable == "High School Diploma" ~ "High School Diploma",
+    variable == "No High School Diploma" ~"No High School Diploma")) |>
+  group_by(geography, variable) |>
+  summarise(share = sum(share)) |>
+  as_tibble() |>
+  filter(variable == "College Degree") |>
+  arrange(desc(share))
+
+metro_population_education_chart_2022 <- echart_bar_chart(t = chart_data ,
+                                                          x = "geography",
+                                                          y = "share",
+                                                          fill = "geography",
+                                                          column_vs_bar = "bar",
+                                                          est = "percent",
+                                                          legend = FALSE,
+                                                          color = psrcplot::psrc_colors$gnbopgy_5)
+
+metro_population_education_chart_2022
+
+```
+
+```{r region-income-2022}
+
+chart_data <- trend_data |> 
+  filter(metric == "income" & geography == "Region" & variable != "Total" & year == "2022") |>
+  mutate(variable = str_wrap(variable, width = 5)) |>
+  mutate(variable = factor(variable, levels = c("under\n$50k",
+                                                "$50k\nto\n$75k",
+                                                "$75k\nto\n$100k",
+                                                "$100k\nto\n$150k",
+                                                "$150k\nto\n$200k",
+                                                "more\nthan\n$200k"))) |>
+  arrange(variable)
+
+region_income_chart_2022 <- echart_bar_chart(t = chart_data ,
+                                            x = "variable",
+                                            y = "share",
+                                            fill = "variable",
+                                            column_vs_bar = "column",
+                                            est = "percent",
+                                            color = psrcplot::psrc_colors$gnbopgy_10,
+                                            legend=FALSE)
+
+region_income_chart_2022
 
 ```
 
@@ -45,19 +223,18 @@ Chart of the share of households by metropolitan area that make at least \$200,0
 ```{r mpo-income}
 
 chart_data <- trend_data |> 
-  filter(metric == "income" & geography_type == "Metro Areas" & variable %in% c("more than $200k")) |>
+  filter(metric == "income" & geography_type == "Metro Areas" & variable %in% c("more than $200k") & year == "2022") |>
   mutate(metric = "% of Households that make more than $200k") |>
   arrange(desc(share))
 
 mpo_income_chart <- echart_bar_chart(t = chart_data ,
                                      x = "geography",
                                      y = "share",
-                                     fill = "metric",
+                                     fill = "geography",
                                      column_vs_bar = "bar",
                                      est = "percent",
-                                     color = psrc_colors$gnbopgy_5,
-                                     title = "Percentage of Households with incomes over $200,000",
-                                     subtitle = "5yr ACS table B19001: 2022")
+                                     legend = FALSE,
+                                     color = psrcplot::psrc_colors$gnbopgy_5)
 
 mpo_income_chart
 
@@ -66,14 +243,14 @@ mpo_income_chart
 ## Commute Mode to Work  
 Chart of the share of commuters by simple mode to work. 
 
-```{r psrc-commute-mode}
+```{r psrc-commute-mode, warning = FALSE, message=FALSE}
 
 chart_data <- trend_data |> 
   filter(metric == "commute-modes" & geography == "Region") |>
   mutate(mode = case_when(
     variable %in% c("Bike", "Carpooled", "Walk", "Transit", "Other") ~ "non-SOV",
-    variable == "Drove Alone" ~ "SOV",
-    variable == "Work from Home" ~ "WFH")) |>
+    variable == "Drove Alone" ~ "Drove Alone",
+    variable == "Work from Home" ~ "Worked from Home")) |>
   group_by(year, mode) |>
   summarise(share = sum(share)) |>
   drop_na() |>
@@ -83,11 +260,11 @@ region_commute_mode_chart <- echart_bar_chart(t = chart_data ,
                                               x = "year",
                                               y = "share",
                                               fill = "mode",
-                                              column_vs_bar = "column",
+                                              column_vs_bar = "bar",
                                               est = "percent",
-                                              color = psrc_colors$gnbopgy_5,
+                                              color = psrcplot::psrc_colors$gnbopgy_5,
                                               title = "Percentage of Commuters by Mode",
-                                              subtitle = "5yr ACS table B08301: 2022")
+                                              subtitle = "US Census Bureau, American Community Survey (ACS) 5yr table B08301")
 
 region_commute_mode_chart
 
